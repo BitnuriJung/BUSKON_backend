@@ -1,0 +1,1 @@
+const domain = 'https://www.buskontest.gq';

@@ -1,0 +1,2106 @@
+openapi: 3.0.0
+info:
+  version: '1.0.0'
+  title: 'BUSKON'
+  description:
+    '공통 response [200 : 성공 / 400 필수데이터 X / 401 세션데이터 없음 / 404 존재 X / 405 지원하지 않는 메소드]
+    & 서비스 내 모든 API BUSKID 전송 필수'
+
+#내가 요청하고 싶은 서버 url 설정 다수로 설정가능
+servers:
+  - description: "인플픽으로 옮긴 서버"
+    url: https://buskontest.gq
+  - description: "기존 버스콘 테섭"
+    url: https://buskon.tk
+
+# 원하면 다른 url 아래처럼 더 추가 가능
+#  - description: "프로젝트 production Server"
+#    url: http://localhost:7777/api
+
+tags:
+  - name: 퀘스트
+    description: 퀘스트 관련 기능들. quests
+  - name: 유저
+    description: 유저 api 모음, users
+  - name: 문자
+    description: 유저 문자 관련 기능들, messages
+  - name: 공연장
+    description: 공연장 기능들, spots
+  - name: 크리스탈
+    description: 크리스탈 관련 기능, crystals
+  - name : 음악
+    description: 음악 관련 기능, musics
+  - name: 관리자
+    description: 관리자 기능 admin, user_auth 값이 1인 유저만 조회 가능 (관리자)
+
+
+
+# API 요청 경로 및 데이터 세팅
+paths:
+  /api/spots/v1/audience:
+    patch:
+      summary: 공연장 입장/퇴장
+      description: BUSKID 필수 | 공연장의 audience_num 컬럼에 입,퇴장에 맞게 숫자 +-1 해주는 기능. 관객수 정렬이 가능하게 하기 위해 만들었다.
+        *          type - 입장 enter, 퇴장 exit
+      tags:
+        - 공연장
+      requestBody:
+        required: true
+        content:
+          application/raw:
+            schema:
+              type: object
+              properties:
+                spot_PK:
+                  description: 입장, 퇴장하는 공연장 고유번호
+                  type: integer
+                  example: 2
+                type:
+                  description: 입장인지 퇴장인지. enter, exit 둘중 하나여야 함
+                  type: string
+                  example: enter
+      responses:
+        '200':
+          description: 입장, 퇴장 처리된 공연장 정보 반환. audience_num 변경된 것을 확인할 수 있다.
+          content:
+            application/json:
+              example:
+                response:
+                  spot_PK: 2
+                  user_PK: 3
+                  spot_name: 오늘은 잔잔하게 갈게요
+                  spot_theme: 1
+                  donation_possible: 1
+                  adult_only: 1
+                  audience_num: 4
+                  reg_date: '2021-12-28 20:55:26'
+                  update_date:
+                  delete_date:
+
+  /api/admin/v1/reports:
+    post:
+      summary: 신고 등록 (by 유저)
+      description: BUSKID 필수 | 신고 등록(BY 유저). 구체적 사유 (report_detail) 제외 모두 필수 데이터. report category (공연장 = 0 클라이언트와 서버 합의하에 숫자 맞춰서 작업하면 됨).
+        *         reported_PK 는 상황에 맞게 공연장이면 공연장 PK, 채팅이면 상대 유저 pk
+      tags:
+        - 관리자
+      requestBody:
+        required: true
+        content:
+          application/raw:
+            schema:
+              type: object
+              properties:
+                reported_PK:
+                  description: 신고 당하는 pk. 상황에 맞게 공연장이면 공연장 PK, 채팅이면 상대 유저 pk
+                  type: integer
+                  example: 3
+                report_category:
+                  description: 공연장 = 0 클라이언트와 서버 합의하에 숫자 맞춰서 작업하면 됨
+                  type: integer
+                  example: 0
+                report_spinner:
+                  description: 신고 스피너 내용
+                  type: string
+                  example: 공연을 진행하지 않음
+                report_detail:
+                  description: 구체적 신고 내용. 옵션임. 없을 때 안보내면 됨
+                  type: string
+                  example:  지금 한시간째 준비만 합니다. 이상해요
+      responses:
+        '200':
+          description: 등록된 신고 내용 정보 반환
+          content:
+            application/json:
+              example:
+                response:
+                  report_PK: 4
+                  user_PK: 1
+                  reported_PK: 3
+                  report_category: 0
+                  report_spinner: 공연을 진행하지 않음
+                  report_detail: 지금 한시간째 준비만 합니다. 이상해요
+                  report_status: 0
+                  report_remarks:
+                  reg_date: '2022-03-09 07:25:41'
+                  update_date:
+
+  /api/quests/v1/achieves:
+    post:
+      summary: 퀘스트 달성.
+      description: BUSKID 필수 | 퀘스트 pk 필수, 등록된 퀘스트 달성 정보 반환
+      tags:
+        - 퀘스트
+      requestBody:
+        required: true
+        content:
+          application/raw:
+            schema:
+              type: object
+              properties:
+                quest_PK:
+                  description: 달성한 퀘스트 고유번호. DB에 존재. 목록 필요하면 요청하시길!
+                  type: integer
+                  example: 3
+      responses:
+        '200':
+          description: 등록된 퀘스트 달성 정보 반환 (star_taken 스타 수령 여부는 기본으로 0)
+          content:
+            application/json:
+              example:
+                response:
+                  quest_achieve_PK: 7
+                  quest_PK: 3
+                  user_PK: 1
+                  star_taken: 0
+                  reg_date: '2022-03-03 07:49:26'
+                  update_date: null
+
+    patch:
+      summary: 퀘스트 달성 스타 수령
+      description: BUSKID 필수 | 퀘스트 pk, 퀘스트 달성 pk 필수. 유저 스타 잔액 & 퀘스트 달성 정보 반환 (star_taken = 1로 바뀌어 있음)
+      tags:
+        - 퀘스트
+      requestBody:
+        required: true
+        content:
+          application/raw:
+            schema:
+              type: object
+              properties:
+                quest_PK:
+                  description: 달성한 퀘스트 고유번호. DB에 존재. 목록 필요하면 요청하시길!
+                  type: integer
+                  example: 3
+                quest_achieve_PK:
+                  description: 퀘스트 달성 고유번호.
+                  type: integer
+                  example: 3
+      responses:
+        '200':
+          description: 유저 스타 잔액 & 퀘스트 달성 정보 반환 (star_taken = 1)
+          content:
+            application/json:
+              example:
+                response:
+                  user_star_num: 4818
+                  obj_quest_achieve:
+                    quest_achieve_PK: 7
+                    quest_PK: 3
+                    user_PK: 1
+                    star_taken: 1
+                    reg_date: '2022-03-03 07:49:26'
+                    update_date:
+
+  /api/music/1/playlists/music:
+    post:
+      summary: 재생목록) 보유곡을 재생목록에 추가
+      description: BUSKID 필수 |받아온 음악 갯수만큼 등록 처리 (없는 음악 pk면 에러반환)
+      tags:
+        - 음악
+      requestBody:
+        required: true
+        content:
+          application/raw:
+            schema:
+              type: object
+              properties:
+                playlist_PK:
+                  description: 음악을 넣으려는 playlist 고유번호
+                  type: integer
+                  example: 1
+                arr_music:
+                  description: 음악 pk 배열
+                  type: array
+                  example: [1,3]
+      responses:
+        '200':
+          description: 등록된 갯수 반환
+          content:
+            application/json:
+              example:
+                response:
+                  affected_cnt: 2
+        '500':
+          description: 존재하지 않는 music_PK 전송한 경우
+          content:
+            application/json:
+              example:
+                error: 'SQLSTATE[23000]: Integrity constraint violation: 1452 Cannot add or update
+                  a child row: a foreign key constraint fails (`buskon`.`PLAYLIST_MUSIC`, CONSTRAINT
+                  `FK_PLAYLIST_MUSIC_MUSIC` FOREIGN KEY (`music_PK`) REFERENCES `MUSIC` (`music_PK`))'
+    delete:
+      summary: 재생목록) 재생목록에서 곡 삭제.
+      description: BUSKID 필수 | 받아온 플레이리스트 음악 갯수만큼 삭제 처리 (없는 플레이리스트 음악 pk면 에러반환)
+      tags:
+        - 음악
+      requestBody:
+        required: true
+        content:
+          application/raw:
+            schema:
+              type: object
+              properties:
+                music_PK:
+                  description: 재생목록에서 삭제할 playlist_music_PK 배열 (존재하지 않는 pk 에러반환)
+                  type: integer
+                  example:
+                    arr_playlist_music_PK:
+                      - 1
+                      - 5
+      responses:
+        '200':
+          description: 삭제된 갯수 반환
+          content:
+            application/json:
+              example:
+                response:
+                  affected_cnt: 2
+        '500':
+          description: 존재하지 않는 playlist_music_PK 전송한 경우
+          content:
+            application/json:
+              example:
+                error: No such music in playlist
+  /api/music/v1/plays:
+    post:
+      summary: 곡 재생 등록 (70% 이상 재생했을 경우)
+      description: BUSKID 필수 |곡 재생 등록 (70% 이상 재생했을 경우). 곡 주인 유저는 해당 정보로 곡이 얼마나 재생되었는지 알 수 있고, 일정 STAR를 지급받는다.
+      tags:
+        - 음악
+      requestBody:
+        required: true
+        content:
+          application/raw:
+            schema:
+              type: object
+              properties:
+                music_PK:
+                  description: 70% 이상 재생한 곡 pk
+                  type: integer
+                  example: 2
+      responses:
+        '200':
+          description: 곡 재생 row 반환
+          content:
+            application/json:
+              example:
+                response:
+                  music_play_PK: 55
+                  music_PK: 6
+                  user_PK: 1
+                  star_taken: 0
+                  reg_date: '2022-02-14 15:25:36'
+  /api/music/v1/my-music/summary:
+    get:
+      summary: 협회장 ) 내 곡 반응 전체 조회
+      description: BUSKID 필수 | 협회장 ) 내 곡 반응 전체 조회 ( 등록곡, 승인대기곡, 재생/구매/추천/최애/누적스타/받을스타 수 ) |
+      tags:
+        - 음악
+      responses:
+        '200':
+          description: 등록곡, 승인대기곡, 재생/구매/추천/최애/누적스타/받을스타 수
+          content:
+            application/json:
+              example:
+                response:
+                  music_num: 4
+                  music_waiting_num: 2
+                  play_num: '16'
+                  prchs_num: '13'
+                  reco_num: '5'
+                  favorite_num: 3
+                  star_taken: 317
+                  star_to_take: 10
+  /api/music/v1/my-music/list:
+    get:
+      summary: 협회장 ) 유저가 올린 곡 페이징 조회
+      description: BUSKID 필수 | 협회장 ) 유저가 올린 곡 페이징 조회 (삭제한 곡은 조회 불가) | 승인상태별 필터 - all, 0-대기, 1-승인, 2-거절 | 정렬 - 발매일순, 재생순, 구매순, 추천순 ( 한글로 보내면 됨 )
+        *          | 곡 정보 + 재생, 추천, 구매 수 / 전체 페이지 수 반환
+      tags:
+        - 음악
+      parameters:
+        - in: query
+          name: page_num
+          schema:
+            type: integer
+          example: 1
+          required: true
+          description: 조회하려는 페이지 번호 (없는 페이지면 404에러)
+        - in: query
+          name: approval_state
+          schema:
+            type: string
+          example: all
+          required: true
+          description: 승인상태별 필터 (전체 -all, 대기곡 -0, 승인곡 - 1, 거절곡 -2)
+        - in: query
+          name: sort
+          schema:
+            type: string
+          example: 발매일순
+          required: true
+          description: 정렬 - 발매일순, 재생순, 구매순, 추천순 ( 한글로 보내면 됨 )
+      responses:
+        '200':
+          description: 전체 페이지 수 + 음악 정보
+          content:
+            application/json:
+              example:
+                response:
+                  total_pages_num: 1
+                  arr_music:
+                      - music_PK: 6
+                        user_PK: 1
+                        music_name: asdfasd
+                        music_singer: dd
+                        music_genre: 5
+                        music_composer: '작곡가 '
+                        music_lyricist:
+                        music_arranger: '편곡가 '
+                        music_featuring: " 피쳐링 "
+                        music_desc: '개 좋은노래 '
+                        music_lyrics: '아주 좋은 가사  '
+                        star_num: 230
+                        music_file_path: 어디
+                        music_cover_path: "/images/music/210101KakaoTalk_20210704_011427797_01.jpg"
+                        approval_state: 1
+                        delete_state: 0
+                        deny_comment: '0'
+                        reg_date: '2022-01-18 21:11:01'
+                        delete_due_date:
+                        prchs_num: 6
+                        play_num: 9
+                        reco_num: 1
+                      - music_PK: 7
+                        user_PK: 1
+                        music_name: 제목을 짓자
+                        music_singer: 좋은 가
+                        music_genre: 5
+                        music_composer: '작곡가 '
+                        music_lyricist: '작사가 '
+                        music_arranger: '편곡가 '
+                        music_featuring: " 피쳐링 "
+                        music_desc: '개 좋은노래 '
+                        music_lyrics: '아주 좋은 가사  '
+                        star_num: 230
+                        music_file_path: 어디
+                        music_cover_path: "/images/music/180146KakaoTalk_20210620_195054711.png"
+                        approval_state: 1
+                        delete_state: 0
+                        deny_comment: '0'
+                        reg_date: '2022-01-19 18:35:46'
+                        delete_due_date:
+                        prchs_num: 2
+                        play_num: 4
+                        reco_num: 1
+  /api/music/v1/my-music:
+    get:
+      summary: 협회장 ) 내 곡 상세조회
+      description: BUSKID 필수 |  협회장 ) 내 곡 상세조회 (곡 정보 + 곡 반응 - 재생/구매/추천/누적스타(star_taken)/최애/받을스타 수(star_to_take))
+      tags:
+        - 음악
+      parameters:
+        - in: query
+          name: music_PK
+          schema:
+            type: integer
+          example: 6
+          required: true
+          description: 조회하려는 음악 번호
+      responses:
+        '200':
+          description: 곡 정보 + 곡 반응 - 재생/구매/추천/최애 수 / 누적스타(star_taken)/받을스타 수(star_to_take)
+          content:
+            application/json:
+              example:
+                response:
+                  music_PK: 6
+                  user_PK: 1
+                  music_name: asdfasd
+                  music_singer: dd
+                  music_genre: 5
+                  music_composer: '작곡가 '
+                  music_lyricist:
+                  music_arranger: '편곡가 '
+                  music_featuring: " 피쳐링 "
+                  music_desc: '개 좋은노래 '
+                  music_lyrics: '아주 좋은 가사  '
+                  star_num: 230
+                  music_file_path: 어디
+                  music_cover_path: "/images/music/210101KakaoTalk_20210704_011427797_01.jpg"
+                  approval_state: 1
+                  delete_state: 0
+                  deny_comment: '0'
+                  reg_date: '2022-01-18 21:11:01'
+                  delete_due_date:
+                  prchs_num: 6
+                  play_num: 9
+                  reco_num: 1
+                  favorite_num: 2
+                  star_to_take: 0
+                  star_taken: 61
+  /api/music/v1/my-music/star:
+    patch:
+      summary: 협회장 ) 스타 수령 (곡별 / 유저별)
+      description: BUSKID 필수  | 협회장 ) 유저가 올린 곡 하나 OR 전체 스타 수령 하기 | type - all/one 중에 하나 필수. one 이라면 music_PK 필수 | 반환- 유저 스타 잔액, 유저가 받은 스타 수 (star_taken_num), 스타 수령처리된 row 수
+      tags:
+        - 음악
+      requestBody:
+        required: true
+        content:
+          application/raw:
+            schema:
+              type: object
+              properties:
+                type:
+                  description: 곡별(상세조회) 요청 - one 인지, 유저별(협회장 메인) 요청 - all 인지
+                  type: string
+                  example : one
+                music_PK:
+                  description: 곡별 요청인 경우 필수. all 이라면 안보내면 됨.
+                  type: integer
+                  example: 2
+      responses:
+        '200':
+          description: 곡 추천 성공시 추천 정보 반환
+          content:
+            application/json:
+              example:
+                response:
+                  user_star_num: 1658
+                  star_taken_num: 0
+                  affected_cnt: 0
+
+  /api/music/v1/showcase:
+    get:
+      summary: 쇼케이스 조회 (곡 정보 +구매/추천/위시)
+      description: BUSKID 필수 | 남이 올린 곡 목록 페이징 조회. | 곡 정보 + 추천+위시+구매여부 | 정렬 (발매일순, 발매역순, (인기순))
+      tags:
+        - 음악
+      parameters:
+        - in: query
+          name: page_num
+          schema:
+            type: integer
+          example: 1
+          required: true
+          description: 조회하려는 페이지 번호 (없는 페이지면 404에러)
+        - in: query
+          name: host_PK
+          schema:
+            type: integer
+          example: 1
+          required: true
+          description: 집주인 pk
+        - in: query
+          name: sort
+          schema:
+            type: string
+          example: 발매일순
+          required: true
+          description: 정렬 종류. 무조건 하나는 보내야 함. 발매일순, 발매역순, (인기순-추가예정)
+      responses:
+        '200':
+          description: 전체 곡수, 전체 음악 수, 음악 정보 array
+          content:
+            application/json:
+              example:
+                response:
+                  total_music_num: 2
+                  total_pages_num: 1
+                  arr_music:
+                    - reco: 0
+                      prch: 1
+                      wish: 1
+                      music_PK: 3
+                      user_PK: 1
+                      music_name: '이름이다 '
+                      music_singer: '나는 가수다 '
+                      music_genre: 3
+                      music_composer: '작곡가 '
+                      music_lyricist: ''
+                      music_arranger: '편곡가 '
+                      music_featuring: " 피쳐링 "
+                      music_desc: '개 좋은노래 '
+                      music_lyrics: '아주 좋은 가사  '
+                      star_num: 230
+                      music_file_path: 어디
+                      music_cover_path: "/images/music/180125KakaoTalk_20210704_011427797_01.jpg"
+                      delete_state: 0
+                      reg_date: '2022-01-18 18:30:25'
+                      delete_due_date:
+                    - reco: 1
+                      prch: 1
+                      wish: 0
+                      music_PK: 4
+                      user_PK: 1
+                      music_name: ''
+                      music_singer: '나는 가수다 '
+                      music_genre: 3
+                      music_composer: '작곡가 '
+                      music_lyricist: ''
+                      music_arranger: '편곡가 '
+                      music_featuring: " 피쳐링 "
+                      music_desc: '개 좋은노래 '
+                      music_lyrics: '아주 좋은 가사  '
+                      star_num: 230
+                      music_file_path: 어디
+                      music_cover_path: "/images/music/180150KakaoTalk_20210704_011427797_01.jpg"
+                      delete_state: 0
+                      reg_date: '2022-01-18 18:33:50'
+                      delete_due_date:
+
+  /api/music/v1/wishes:
+    post:
+      summary: 위시리스트 등록
+      description: BUSKID 필수 | (등록할 음악 pk 배열받아서) 한 곡이라도 array에 담아보내야 함. | 등록 성공갯수 반환
+      tags:
+        - 음악
+      requestBody:
+        required: true
+        content:
+          application/raw:
+            schema:
+              type: object
+              properties:
+                music_PK:
+                  description: 위시리스트에 등록할 musicPK 배열
+                  type: integer
+                  example:
+                    arr_music_PK:
+                             - 3
+                             - 5
+      responses:
+        '200':
+          description: 등록 성공한 갯수 반환
+          content:
+            application/json:
+              example:
+                response:
+                  affected_cnt: 2
+    delete:
+      summary: 위시리스트 에서 삭제 (array로 삭제)
+      description: BUSKID 필수 | (등록할 음악 pk 배열받아서) 한 곡이라도 array에 담아보내야 함 | 삭제 성공갯수 반환
+      tags:
+        - 음악
+      requestBody:
+        required: true
+        content:
+          application/raw:
+            schema:
+              type: object
+              properties:
+                music_PK:
+                  description: 위시리스트에서 삭제할 musicPK 배열
+                  type: integer
+                  example:
+                    arr_music_PK:
+                      - 3
+                      - 5
+      responses:
+        '200':
+          description: 삭제 성공한 갯수 반환
+          content:
+            application/json:
+              example:
+                response:
+                  affected_cnt: 2
+  /api/music/v1/wishes/list:
+    get:
+      summary: 위시 리스트 페이징 조회
+      description: BUSKID 필수 | 유저 위시 목록 곡을 조회한다, 페이징 조회 , 곡 기본정보 + STAR 가격까지
+      tags:
+        - 음악
+      parameters:
+        - in: query
+          name: page_num
+          schema:
+            type: integer
+          example: 1
+          required: true
+          description: 조회하려는 페이지 번호 (없는 페이지면 404에러)
+      responses:
+        '200':
+          description: 전체 위시리스트 음악 갯수, 전체 페이지수, 음원정보(음원 업로더:m_user_PK/현재유저:mw_user_PK/star_num) 반환
+          content:
+            application/json:
+              example:
+                response:
+                  total_music_num: 2
+                  total_pages_num: 1
+                  arr_music:
+                    - music_wish_PK: 5
+                      mw_user_PK: 1
+                      music_PK: 3
+                      m_user_PK: 1
+                      music_name: '이름이다 '
+                      music_singer: '나는 가수다 '
+                      music_genre: 3
+                      music_composer: '작곡가 '
+                      music_lyricist: ''
+                      music_arranger: '편곡가 '
+                      music_featuring: " 피쳐링 "
+                      music_desc: '개 좋은노래 '
+                      music_lyrics: '아주 좋은 가사  '
+                      star_num: 230
+                      music_file_path: 어디
+                      music_cover_path: "/images/music/180125KakaoTalk_20210704_011427797_01.jpg"
+                      delete_state: 0
+                      reg_date: '2022-01-18 18:30:25'
+                      delete_due_date:
+                    - music_wish_PK: 4
+                      mw_user_PK: 1
+                      music_PK: 1
+                      m_user_PK: 3
+                      music_name: 좋은제목
+                      music_singer: 가수
+                      music_genre: 3
+                      music_composer: ''
+                      music_lyricist:
+                      music_arranger:
+                      music_featuring:
+                      music_desc:
+                      music_lyrics: 조금길어도 가사에요
+                      star_num: 80
+                      music_file_path: path/to/music/file
+                      music_cover_path: "/path/to/music/cover/"
+                      delete_state: 0
+                      reg_date: '2022-01-18 18:27:06'
+                      delete_due_date:
+  /api/music/v1/reco:
+    post:
+      summary: 곡 추천 (구매자만 추천 가능, 1곡씩 추천)
+      description: BUSKID 필수 | 추천 정보 반환
+      tags:
+        - 음악
+      requestBody:
+        required: true
+        content:
+          application/raw:
+            schema:
+              type: object
+              properties:
+                music_PK:
+                  description: 추천하려는 곡 pk
+                  type: integer
+                  example: 2
+      responses:
+        '200':
+          description: 곡 추천 성공시 추천 정보 반환
+          content:
+            application/json:
+              example:
+                response:
+                  music_reco_PK: 5
+                  music_PK: 7
+                  user_PK: 1
+                  reg_date: '2022-01-24 17:02:09'
+                  delete_date:
+    delete:
+      summary: 곡 추천 취소 (1곡씩 추천)
+      description: BUSKID 필수 | 추천 정보 반환
+      tags:
+        - 음악
+      requestBody:
+        required: true
+        content:
+          application/raw:
+            schema:
+              type: object
+              properties:
+                music_PK:
+                  description: 추천하려는 곡 pk
+                  type: integer
+                  example: 2
+      responses:
+        '200':
+          description: 곡 추천 취소 성공시 수정된 추천 정보 반환 (delete_date 생김)
+          content:
+            application/json:
+              example:
+                response:
+                  music_reco_PK: 5
+                  music_PK: 7
+                  user_PK: 1
+                  reg_date: '2022-01-24 17:02:09'
+                  delete_date: '2022-01-27 16:10:09'
+  /api/music/v1/prchs:
+    post:
+      summary: 곡 구매 (여러곡 or 1곡 / 반드시 array로)
+      description: 곡 구매 후 그 스타만큼 유저 스타 차감 | arr_music - music_PK, star_num 오브젝트로 이루어진 배열 | 없는 음악 PK로 테스트하면 에러 발생함. 반드시 존재하는 음원으로 테스트 하거나 서버에 트랜잭션 처리 꺼달라고 요청할 것
+      tags:
+        - 음악
+      requestBody:
+        required: true
+        content:
+          application/raw:
+            schema:
+              type: object
+              properties:
+                arr_music:
+                  description: music_PK, star_num 오브젝트로 이루어진 배열
+                  type: array
+                  example: '[{"music_PK":3, "star_num":1},
+                             {"music_PK":5, "star_num":1} ]'
+      responses:
+        '200':
+          description: 등록 성공
+          content:
+            application/json:
+              example:
+                response:
+                  user_star_num: 1660
+                  affected_cnt: 2
+    delete:
+      summary: 보유곡에서/곡 검색 목록에서 해당 곡 or 곡 목록 삭제처리 (1곡이라도 반드시 array로 전달할것 )
+      description:  arr_music_PK - music_PK 로 이루어진 배열 |
+      tags:
+        - 음악
+      requestBody:
+        required: true
+        content:
+          application/raw:
+            schema:
+              type: object
+              properties:
+                arr_music:
+                  description: music_PK 로 이루어진 배열
+                  type: array
+                  example: '[3,4,6]'
+
+      responses:
+        '200':
+          description: 삭제 성공 시 처리된 row 갯수만 반환
+          content:
+            application/json:
+              example:
+                response:
+                  affected_cnt: 3
+  /api/music/v1/prchs/list:
+    get:
+      summary: 보유곡 조회 (곡정보+추천+최애여부)
+      description: BUSKID 필수 / 보유곡 조회 (곡 정보+추천+최애여부) 페이징, sort값은 에러발생 줄이기 위해 한글로 받기로함.띄어쓰기 없이!'구매최신순''발매일순''곡명순''곡명역순'  | 전체 페이지 수, 전체 곡 수, 곡 array (arr_music) 반환
+      tags:
+        - 음악
+      parameters:
+        - in: query
+          name: page_num
+          schema:
+            type: integer
+          example: 1
+          required: true
+          description: 조회하려는 페이지 번호 (없는 페이지면 404에러)
+        - in: query
+          name: sort
+          schema:
+            type: string
+          example: 곡명역순
+          required: true
+          description: 필수 , 정렬값 한글로 보내면 됨. 띄어쓰기 없이! '구매최신순''발매일순''곡명순''곡명역순'
+      responses:
+        '200':
+          description: 조회 성공시, 보유곡 갯수, 전체 페이지수, 음원정보(곡정보+추천+최애여부 0이면 false 1이면 true) 반환
+          content:
+            application/json:
+              example:
+                response:
+                  total_music_num: 4
+                  total_pages_num: 1
+                  arr_music:
+                    - favorite: 1
+                      reco: 1
+                      mp_music_PK: 1
+                      music_prchs_PK: 42
+                      mp_reg_date: '2022-01-24 17:24:32'
+                      mp_user_PK: 1
+                      music_PK: 1
+                      user_PK: 3
+                      music_name: 좋은제목
+                      music_singer: 가수
+                      music_genre: 3
+                      music_composer: ''
+                      music_lyricist:
+                      music_arranger:
+                      music_featuring:
+                      music_desc:
+                      music_lyrics: 조금길어도 가사에요
+                      music_file_path: path/to/music/file
+                      music_cover_path: "/path/to/music/cover/"
+                      delete_state: 0
+                      reg_date: '2022-01-18 18:27:06'
+                      delete_due_date:
+                    - favorite: 0
+                      reco: 0
+                      mp_music_PK: 3
+                      music_prchs_PK: 41
+                      mp_reg_date: '2022-01-24 17:24:32'
+                      mp_user_PK: 1
+                      music_PK: 3
+                      user_PK: 1
+                      music_name: '이름이다 '
+                      music_singer: '나는 가수다 '
+                      music_genre: 3
+                      music_composer: '작곡가 '
+                      music_lyricist: ''
+                      music_arranger: '편곡가 '
+                      music_featuring: " 피쳐링 "
+                      music_desc: '개 좋은노래 '
+                      music_lyrics: '아주 좋은 가사  '
+                      music_file_path: 어디
+                      music_cover_path: "/images/music/180125KakaoTalk_20210704_011427797_01.jpg"
+                      delete_state: 0
+                      reg_date: '2022-01-18 18:30:25'
+                      delete_due_date:
+                    - favorite: 0
+                      reco: 0
+                      mp_music_PK: 2
+                      music_prchs_PK: 1
+                      mp_reg_date: '2022-01-18 20:51:15'
+                      mp_user_PK: 1
+                      music_PK: 2
+                      user_PK: 1
+                      music_name: ssss
+                      music_singer: '나는 가수다 '
+                      music_genre: 3
+                      music_composer: '작곡가 '
+                      music_lyricist: '작사가 '
+                      music_arranger: '편곡가 '
+                      music_featuring: " 피쳐링 "
+                      music_desc: '개 좋은노래 '
+                      music_lyrics: 가사에요 가사
+                      music_file_path: 어디
+                      music_cover_path: "/images/music/180108KakaoTalk_20210704_011427797_01.jpg"
+                      delete_state: 0
+                      reg_date: '2022-01-18 18:30:08'
+                      delete_due_date:
+                    - favorite: 0
+                      reco: 1
+                      mp_music_PK: 4
+                      music_prchs_PK: 44
+                      mp_reg_date: '2022-01-27 16:57:47'
+                      mp_user_PK: 1
+                      music_PK: 4
+                      user_PK: 1
+                      music_name: ''
+                      music_singer: '나는 가수다 '
+                      music_genre: 3
+                      music_composer: '작곡가 '
+                      music_lyricist: ''
+                      music_arranger: '편곡가 '
+                      music_featuring: " 피쳐링 "
+                      music_desc: '개 좋은노래 '
+                      music_lyrics: '아주 좋은 가사  '
+                      music_file_path: 어디
+                      music_cover_path: "/images/music/180150KakaoTalk_20210704_011427797_01.jpg"
+                      delete_state: 0
+                      reg_date: '2022-01-18 18:33:50'
+                      delete_due_date:
+  /api/admin/v1/music/list:
+    get:
+      summary: 음원 목록 페이징 조회
+      description: 필터별(전체, 승인상태별)/검색어별 등록된 음원 페이징 목록 조회. 리미트는 임의로 15개로 한다. / 조회 결과가 0인 경우 arr_music- [ ] 빈 어레이가 간다
+                    / 검색어는 음악 제목,가수,작사,작곡,편곡,피쳐링을 검색한다. 검색어가 없다면 keyword 키/값을 다 보내지 않으면 됨
+      tags:
+        - 관리자
+      parameters:
+        - in: query
+          name: page_num
+          schema:
+            type: integer
+          example: 1
+          required: true
+          description: 조회하려는 페이지 번호 (없는 페이지면 404에러)
+        - in: query
+          name: filter
+          schema:
+            type: string
+          example: all
+          required: true
+          description: 조회하려는 필터링 조건 (all, 0(대기), 1(승인) 2(거절) 곡 조회 waiting, approve, deny)
+      responses:
+        '200':
+          description: 조회 성공시 등록된 음원 갯수 반환
+          content:
+            application/json:
+              example:
+                response:
+                  total_pages_num: 1
+                  arr_music:
+                    - music_PK: 2
+                      user_PK: 3
+                      music_name: 좋은제목
+                      music_singer: 가수
+                      music_genre: 3
+                      music_composer: ''
+                      music_lyricist:
+                      music_arranger:
+                      music_featuring:
+                      music_desc:
+                      music_lyrics: 조금길어도 가사에요
+                      star_num: 80
+                      music_file_path: path/to/music/file
+                      music_cover_path: "/path/to/music/cover/"
+                      approval_state: 2
+                      delete_state: 0
+                      deny_comment: '0'
+                      admin_comment: '0'
+                      reg_date: '2022-01-18 18:27:06'
+                      update_date: '2022-01-18 20:41:16'
+                      delete_due_date:
+                      delete_date:
+                    - music_PK: 2
+                      user_PK: 1
+                      music_name: ssss
+                      music_singer: '나는 가수다 '
+                      music_genre: 3
+                      music_composer: '작곡가 '
+                      music_lyricist: '작사가 '
+                      music_arranger: '편곡가 '
+                      music_featuring: " 피쳐링 "
+                      music_desc: '개 좋은노래 '
+                      music_lyrics: 가사에요 가사
+                      star_num: 70
+                      music_file_path: 어디
+                      music_cover_path: "/images/music/180108KakaoTalk_20210704_011427797_01.jpg"
+                      approval_state: 2
+                      delete_state: 0
+                      deny_comment: '0'
+                      admin_comment: '0'
+                      reg_date: '2022-01-18 18:30:08'
+                      update_date: '2022-01-19 17:13:47'
+                      delete_due_date:
+                      delete_date:
+  /api/admin/v1/music/summary:
+    get:
+      summary: 음원 전체 등록,승인상태,삭제수 조회
+      description: 전체 등록곡 수, 승인상태별 수(대기/승인/거절, 삭제곡은 제외), 삭제곡 수 조회 / 상태별 수 + 삭제곡 수 = 등록곡 수
+      tags:
+        - 관리자
+      responses:
+        '200':
+          description: 조회 성공시 전체 등록수, 대기/승인/거절 수, 삭제곡 수 반환
+          content:
+            application/json:
+              example:
+                response:
+                  upload_num: 7
+                  waiting_num: 4
+                  approve_num: 0
+                  deny_num: 2
+                  delete_num: 1
+  /api/admin/v1/music/upload-num:
+    get:
+      summary: 기간별 음원 등록 갯수 조회
+      description: 시작일,종료일 기간을 받아 해당 기간동안 업로드된 곡 갯수 반환 / 약간의 통계라고 볼 수 있음
+      tags:
+        - 관리자
+      parameters:
+        - in: query
+          name: start_date
+          schema:
+            type: string
+          example: '2022-01-10'
+          required: true
+          description: 조회 시작날짜
+        - in: query
+          name: end_date
+          schema:
+            type: string
+          example: '2022-01-18'
+          required: true
+          description: 조회 마지막날짜
+      responses:
+        '200':
+          description: 조회 성공시 등록된 음원 갯수 반환
+          content:
+            application/json:
+              example:
+                response:
+                  upload_num: 4
+  /api/admin/v1/music/approval-state:
+    patch:
+      summary: 음원 승인/거절
+      description: 관리자가 음원을 승인하고 거절함. 거절인 경우 deny_comment 필수. 승인인 경우 deny_comment 키/값 안보내도 됨
+      tags:
+        - 관리자
+      requestBody:
+        required: true
+        content:
+          application/raw:
+            schema:
+              type: object
+              properties:
+                music_PK:
+                  description: 승인하려는 하는 음악 pk
+                  type: integer
+                  example: 2
+                type:
+                  description: 승인인지 거절인지. approve, deny 둘 중 하나가 아니면 에러남
+                  type: string
+                  example: approve
+                deny_comment:
+                  description: 거절인 경우 반드시 있어야 함. 거절 사유. approve일때는 상관 없음
+                  type: string
+                  example: 곡이 노잼이네요
+      responses:
+        '200':
+          description: 승인/거절 완료된 경우, 해당 음원 정보 전체 반환
+          content:
+            application/json:
+              example:
+                response:
+                  music_PK: 5
+                  user_PK: 1
+                  music_name: asdfasd
+                  music_singer: dd
+                  music_genre: 5
+                  music_composer: '작곡가 '
+                  music_lyricist: ''
+                  music_arranger: '편곡가 '
+                  music_featuring: " 피쳐링 "
+                  music_desc: '개 좋은노래 '
+                  music_lyrics: '아주 좋은 가사  '
+                  star_num: 230
+                  music_file_path: 어디
+                  music_cover_path: "/images/music/180121KakaoTalk_20210704_011427797_01.jpg"
+                  approval_state: 1
+                  delete_state: 1
+                  deny_comment:
+                  admin_comment: '0'
+                  reg_date: '2022-01-18 18:35:21'
+                  update_date: '2022-01-19 21:34:06'
+                  delete_date:
+                  delete_due_date:
+  /api/admin/v1/music/admin-comment:
+    patch:
+      summary: 비고 수정
+      description: 비고 등록, 수정, 삭제 모두 하나로 끝냄. 빈칸 보내도 됨. 내용이 content!
+      tags:
+        - 관리자
+      requestBody:
+        required: true
+        content:
+          application/raw:
+            schema:
+              type: object
+              properties:
+                music_PK:
+                  description: 비고 수정하려는 음악 pk
+                  type: integer
+                  example: 2
+                type:
+                  description: 비고 내용. "" 이렇게 빈칸 보내도 상관 없음!
+                  type: string
+                  example: 비고 내용을 적어볼까요? 귀찮다구요? 알겠습니다..
+  /api/music/v1/music:
+    post:
+      summary: 음원정보 등록
+      description: BUSKID 필수 / 커버 이미지때문에 form-data임!! / 음악 커버 이미지는 유저가 고르지 않은 경우 그 유저 프로필 사진 경로를 music_cover_path값에, 고른 경우 music_cover_file값에 파일을 보내면 됨
+                  / 필수 데이터 - 가수, 음악 제목, 음악 장르(int), 음악파일 경로, 스타 가격, 음악 커버 이미지 (경로 혹은 파일) / 필수 아닌 데이터는 그냥 안보내면 됨. 키/값을 둘 다
+      tags:
+        - 음악
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                music_singer:
+                  description: 가수
+                  type: string
+                  example: 아이유
+                music_genre:
+                  description: 장르 번호 (프론트 단에서 하드코딩)
+                  type: integer
+                  example: 3
+                music_name:
+                  description: 음악 제목
+                  type: string
+                  example: 제목
+                star_num:
+                  description: 곡 스타 가격 (수정 가능)
+                  type: integer
+                  example: 60
+                music_file_path:
+                  description: 음악파일 경로
+                  type: string
+                  example: /path/to/music
+                music_cover_path:
+                  description: 음악 커버 변경안한경우, 유저 프로필사진 경로를 보내도록 해야 함. path / file 둘 중 하나는 필수
+                  type: string
+                  example: /path/to/music/cover
+                music_cover_file:
+                  description: 유저가 업로드하려는 음악 커버 파일. path / file 둘 중 하나는 필수
+                  type: string
+                  format: binary
+                music_composer:
+                  description: 작곡가
+                  type: string
+                  example: 훌륭한작곡가
+                music_arranger:
+                  description: 편곡가
+                  type: string
+                  example: 훌륭한편곡가
+                music_lyricist:
+                  description: 작사가
+                  type: string
+                  example: 훌륭한작사가
+                music_featuring:
+                  description: 피처링
+                  type: string
+                  example: 훌륭 한 피처링
+                music_desc:
+                  description: 음악 설명 (수정가능)
+                  type: string
+                  example: 아주 좋은 노래
+                music_lyrics:
+                  description: 음악 가사 (수정가능)
+                  type: string
+                  example: 쩌는 가사
+              required:
+                - music_singer
+                - music_genre
+                - music_name
+                - star_num
+                - music_file_path
+
+      responses:
+        '200':
+          description: 등록 성공
+          content:
+            application/json:
+              example:
+                response:
+                  music_PK: 6
+                  user_PK: 1
+                  music_name: asdfasd
+                  music_singer: dd
+                  music_genre: 5
+                  music_composer: '작곡가 '
+                  music_lyricist:
+                  music_arranger: '편곡가 '
+                  music_featuring: " 피쳐링 "
+                  music_desc: '개 좋은노래 '
+                  music_lyrics: '아주 좋은 가사  '
+                  star_num: 230
+                  music_file_path: 어디
+                  music_cover_path: "/images/music/210101KakaoTalk_20210704_011427797_01.jpg"
+                  approval_state: 0
+                  reg_date: '2022-01-18 21:11:01'
+                  update_date:
+                  delete_date:
+                  delete_due_date:
+
+    get:
+      summary: 곡 1개 상세정보 조회 (내가 추천/구매/위시 했는지 여부까지)
+      description: BUSKID 필수 / 구매 여부 prch, 추천여부 reco, 추천여부 wish / 했으면 1, 안했으면 0
+      tags:
+        - 음악
+      parameters:
+        - in: query
+          name: music_PK
+          schema:
+            type: integer
+          example: 5
+          description: 조회하려는 음악 PK
+      responses:
+        '200':
+          description: 조회 성공
+          content:
+            application/json:
+              example:
+                response:
+                  music_PK: 2
+                  user_PK: 1
+                  music_name: '이름이다 '
+                  music_singer: '나는 가수다 '
+                  music_genre: 3
+                  music_composer: '작곡가 '
+                  music_lyricist: '작사가 '
+                  music_arranger: '편곡가 '
+                  music_featuring: " 피쳐링 "
+                  music_desc: '개 좋은노래 '
+                  music_lyrics: 가사에요 가사
+                  star_num: 70
+                  music_file_path: 어디
+                  music_cover_path: "/images/music/180108KakaoTalk_20210704_011427797_01.jpg"
+                  approval_state: 0
+                  reg_date: '2022-01-18 18:30:08'
+                  update_date: '2022-01-18 20:33:11'
+                  delete_date:
+                  delete_due_date:
+                  reco: 1
+                  prch: 0
+                  wish: 1
+    patch:
+      summary: 곡 1개 정보 수정(가사/설명/스타)
+      description: BUSKID 필수 / type은 'star_num', 'lyrics', 'desc' 3가지만 가능. 아니면 에러남 / 존재하지 않는 곡정보에 수정 요쳥하는 경우 null반환됨
+      tags:
+        - 음악
+      requestBody:
+        required: true
+        content:
+          application/raw:
+            schema:
+              type: object
+              properties:
+                music_PK:
+                  description: 수정하려고 하는 음악 pk
+                  type: integer
+                  example: 2
+                type:
+                  description: 수정할 정보 타입. 'star_num', 'lyrics', 'desc' 3가지만 가능. 아니면 에러남
+                  type: string
+                  example: lyrics
+                content:
+                  description: 타입에 맞는 데이터. star_num이면 숫자, 가사와 설명이면 스트링을 보내면 된다
+                  type: string
+                  example: 좋은 가사로 바꿔봅시다
+
+      responses:
+        '200':
+          description: 수정 성공
+          content:
+            application/json:
+              example:
+                response:
+                  music_PK: 1
+                  user_PK: 3
+                  music_name: 좋은제목
+                  music_singer: 가수
+                  music_genre: 3
+                  music_composer: ''
+                  music_lyricist:
+                  music_arranger:
+                  music_featuring:
+                  music_desc:
+                  music_lyrics: 조금길어도 가사에요
+                  star_num: 80
+                  music_file_path: path/to/music/file
+                  music_cover_path: "/path/to/music/cover/"
+                  approval_state: 0
+                  reg_date: '2022-01-18 18:27:06'
+                  update_date: '2022-01-18 20:41:16'
+                  delete_date:
+                  delete_due_date:
+  /api/crystals/v1/crystals/summary:
+    get:
+      summary: 유저 크리스탈 상단 조회 (구매, 후원, 환전 크리스탈 전체)
+      description: BUSKID 필수 / 유저가 크리스탈 뱅킹 들어갔을 때, 상단 정보 (크리스탈 잔액, 누적 후원 크리스탈, 누적 환전 크리스탈) / 유저 pk외에 다른 정보 보낼 것 없음
+      tags:
+        - 크리스탈
+      responses:
+        '200':
+          description: 조회 성공시, 해당 유저의 총 소유 크리스탈(유효기간 남은것만)수, 후원받은 수 (유효기간 남은것만), 누적 환전수 반환
+          content:
+            application/json:
+              example:
+                response:
+                  crystal_num: 102
+                  donation_crystal_num: 82
+                  exchange_crystal_num: 230
+  /api/crystals/v1/donations:
+    post:
+      summary: 공연장에서 크리스탈 후원하기
+      description: BUSKID 필수 / (TODO -음원구독) 클라이언트에서 반드시 지금 가진 크리스탈 숫자보다 많이 못넘기게 예외처리 해줘야 함 / 타입 0-공연장 & spot_PK 필수
+      tags:
+        - 크리스탈
+      responses:
+        '200':
+          description: 후원 성공
+          content:
+            application/json:
+              example:
+                response:
+                  response_msg: Donation Successful
+                  user_crystal_num: 103
+      requestBody:
+        required: true
+        content:
+          application/raw:
+            schema:
+              type: object
+              properties:
+                receiver_PK:
+                  description: 후원받는 사람 고유번호
+                  type: integer
+                  example: 2
+                donation_type:
+                  description: 후원 종류. 현재는 0(공연장)만 가능
+                  type: integer
+                  example: 0
+                crystal_num:
+                  description: 후원 크리스탈 갯수
+                  type: integer
+                  example: 2
+                spot_PK:
+                  description: 후원하는 공연장 pk
+                  type: integer
+                  example: 2
+
+  /api/crystals/v1/stars:
+    post:
+      summary: 크리스탈로 스타 구매
+      description: BUSKID 필수 / 스타갯수와 크리스탈 갯수를 보내면 알아서 증감 후, 해당 유저의 크리스탈, 스타 현재 갯수 반환
+      tags:
+        - 크리스탈
+      responses:
+        '200':
+          description: 구매 성공
+          content:
+            application/json:
+              example:
+                response:
+                  response_msg: Crystal star successful
+                  user_crystal_num: 103
+                  user_star_num: 1667
+      requestBody:
+        required: true
+        content:
+          application/raw:
+            schema:
+              type: object
+              properties:
+                crystal_num:
+                  description: 유저 크리스탈 잔액
+                  type: integer
+                  example: 2
+                star_num:
+                  description: 유저 스타 잔액
+                  type: integer
+                  example: 252
+
+  /api/spots/v1/effects/list:
+    get:
+      summary: 공연장 모집 효과 목록 조회
+      description: BUSKID 필수 / 공연장 열린지 1시간이 안된 모집 효과 목록 + 모집된 인원 불러오기
+      tags:
+        - 공연장
+      parameters:
+        - in: query
+          name: spot_PK
+          schema:
+            type: integer
+          example: 28
+          description: 조회하려는 공연장 PK
+      responses:
+        '200':
+          description: 공연장 모집효과 array
+          content:
+            application/json:
+              example:
+                response:
+                - spot_effect_PK: 4
+                  user_PK: 2
+                  spot_PK: 28
+                  effect_type: 2
+                  star_per_user: 50
+                  goal_user_num: 15
+                  effect_activation: 0
+                  reg_date: '2022-01-05 15:26:16'
+                  update_date:
+                  gathered_user_num: 0
+                - spot_effect_PK: 70
+                  user_PK: 2
+                  spot_PK: 28
+                  effect_type: 2
+                  star_per_user: 50
+                  goal_user_num: 15
+                  effect_activation: 0
+                  reg_date: '2022-01-05 15:25:55'
+                  update_date:
+                  gathered_user_num: 0
+  /api/spots/v1/effect-joins:
+    post:
+      summary: 공연장 내 효과 모집에 참여하기
+      description: BUSKID 필수 / 참여한 유저 star 차감
+        참여한 효과 모집 정보 + 모집된 인원 (gathered_user_num) + 해당 유저의 스타 잔액(star_num) 리턴
+      tags:
+        - 공연장
+      requestBody:
+        required: true
+        content:
+          application/raw:
+            schema:
+              type: object
+              properties:
+                spot_effect_PK:
+                  description: 효과 모집 pk
+                  type: integer
+                  example: 28
+                star_num:
+                  description: 참가 스타비
+                  type: integer
+                  example: 20
+      responses:
+        '200':
+          description: 생성 성공
+          content:
+            application/json:
+              example:
+                response:
+                  user_star_num: 2268
+                  spot_effect:
+                    - spot_effect_PK: 67
+                      user_PK: 1
+                      spot_PK: 67
+                      effect_type: 12
+                      star_per_user: 24
+                      goal_user_num: 50
+                      effect_activation: 0
+                      reg_date: '2022-01-05 11:48:42'
+                      update_date:
+                      gathered_user_num: 12
+
+  /api/spots/v1/effects:
+    post:
+      summary: 공연장 효과 모집 열기
+      description: BUSKID 필수 / 생성된 효과 모집 고유번호 리턴
+      tags:
+        - 공연장
+      requestBody:
+        required: true
+        content:
+          application/raw:
+            schema:
+              type: object
+              properties:
+                spot_PK:
+                  description: 효과 모집 pk
+                  type: integer
+                  example: 28
+                star_per_user:
+                  description: 참가 스타비
+                  type: integer
+                  example: 20
+                effect_type:
+                  description: 효과 타입
+                  type: integer
+                  example: 2
+                goal_user_num:
+                  description: 목표 모집인원
+                  type: integer
+                  example: 20
+
+      responses:
+        '200':
+          description: 생성 성공
+          content:
+            application/json:
+              example:
+                response:
+                  spot_effect_PK: 74
+                  user_PK: 1
+                  spot_PK: 75
+                  effect_type: 12
+                  star_per_user: 24
+                  goal_user_num: 22
+                  effect_activation: 0
+                  reg_date: '2022-03-07 05:55:25'
+                  update_date:
+
+
+  /api/spots/v1/forced-exits:
+    post:
+      summary: 공연장에서 강퇴
+      description: BUSKID 필수 / 공연장에서 특정 유저를 강퇴시킴 / 방장만 할 수 있도록 해야 함
+      tags:
+        - 공연장
+      responses:
+        '200':
+          description: 강퇴 정보 반환 (forced-exit) user_PK - 강퇴당한 유저
+          content:
+            application/json:
+              example:
+                response:
+                  forced_exit_PK: 9
+                  spot_PK: 7
+                  user_PK: 22
+                  reg_date: '2022-01-24 18:37:52'
+
+      requestBody:
+        required: true
+        content:
+          application/raw:
+            schema:
+              type: object
+              properties:
+                spot_PK:
+                  description: 공연장 고유번호
+                  type: integer
+                  example: 7
+                exit_user_PK:
+                  description: 강퇴하려는 유저 고유번호
+                  type: integer
+                  example: 22
+
+    get:
+      summary: 공연장 강퇴여부 조회
+      description: BUSKID 필수 / 입장시 확인
+      tags:
+        - 공연장
+      parameters:
+        - in: query
+          name: spot_PK
+          schema:
+            type: integer
+          description: 조회하려는 공연장 번호
+      responses:
+        '200':
+          description: 강퇴 당했으면 1 안당했으면 0
+          content:
+            application/json:
+              example:
+                response:
+                  forced-exits: 1
+
+  /api/spots/v1/spots/list:
+    get:
+      summary: 공연장 전체 목록 페이징 조회
+      description: BUSKID 필수(인데, 꼭 필요할까 고민은 됨) / 페이징 번호 필수, 없는 페이지 요청하는 경우 404 에러 발생 / 4개씩 조회 / 정렬은 최신순, 관객많은순 둘 중 하나 / 검색어 없으면 아예 안보내면 됨
+      tags:
+        - 공연장
+      parameters:
+        - in: query
+          name: page_num
+          required: true
+          schema:
+            type: integer
+          description: 조회하려는 공연장 목록 페이지 번호
+          example: 1
+        - in: query
+          name: sort
+          required: true
+          example: 최신순
+          schema:
+            type: string
+          description: 정렬방법. 최신순, 관객많은순 한글로 보내면 됨. 둘중 하나가 아니면 에러남
+        - in: query
+          name: keyword
+          example: 재
+          schema:
+            type: string
+          description: 검색어. 없으면 안보내야 함. 공연장 연 유저 닉네임, 공연장 이름 검색
+
+      responses:
+        '200':
+          description: 공연장 목록 조회 성공
+          content:
+            application/json:
+              example:
+                response:
+                  spots_cnt: 7
+                  total_pages_num: 2
+                  arr_spots:
+                    - spot_PK: 8
+                      user_PK: 1
+                      spot_name: 베이스dddd 좋아해요?
+                      spot_theme: 2
+                      donation_possible: 1
+                      adult_only: 0
+                      reg_date: '2022-01-08 16:48:54'
+                      update_date:
+                      delete_date:
+                    - spot_PK: 9
+                      user_PK: 1
+                      spot_name: 베이스 좋아해요?
+                      spot_theme: 2
+                      donation_possible: 1
+                      adult_only: 0
+                      reg_date: '2022-01-04 16:48:54'
+                      update_date:
+                      delete_date:
+                    - spot_PK: 10
+                      user_PK: 1
+                      spot_name: 우울할때 같이 듣기 좋은 노래들만 합니다
+                      spot_theme: 2
+                      donation_possible: 1
+                      adult_only: 0
+                      reg_date: '2022-01-04 20:01:31'
+                      update_date:
+                      delete_date:
+                    - spot_PK: 11
+                      user_PK: 1
+                      spot_name: 10분 잠깐 버스킹~!
+                      spot_theme: 2
+                      donation_possible: 1
+                      adult_only: 0
+                      reg_date: '2022-01-04 20:01:51'
+                      update_date:
+                      delete_date:
+
+  /api/spots/v1/spots:
+    post:
+      summary: 공연장 만들기
+      description: BUSKID 필수 / 공연장 생성 & 생성한 유저의 스타 차감 (임의로 20으로 해둠)
+      tags:
+        - 공연장
+      requestBody:
+        required: true
+        content:
+          application/raw:
+            schema:
+              type: object
+              properties:
+                spot_name:
+                  description: 공연장 이름
+                  type: string
+                  example: 멋진 이름...
+                spot_theme:
+                  description: 공연장 테마. 공연장이 열리는 위치값
+                  type: integer
+                  example: 1
+                donation_possible:
+                  description: 후원 가능 여부. 0은 false,불가능 1은 true,가능
+                  type: integer
+                  example: 1
+                adult_only:
+                  description: 19금 공연여부. 0은 false,불가능 1은 true,가능
+                  type: integer
+                  example: 1
+      responses:
+        '200':
+          description: 만든 유저 스타 잔액 + 생성된 공연장 정보
+          content:
+            application/json:
+              example:
+                response:
+                  user_star_num: 4778
+                  obj_spot:
+                    spot_PK: 18
+                    user_PK: 1
+                    spot_name: 멋진 이름...
+                    spot_theme: 2
+                    donation_possible: 1
+                    adult_only: 0
+                    reg_date: '2022-03-07 07:08:17'
+                    update_date:
+                    delete_date:
+
+
+    get:
+      summary: 공연장 1개 상세 조회
+      description: BUSKID 필수 / 공연장 근처에 가서 구경하기 & SNS 홍보때 호출
+      tags:
+        - 공연장
+      parameters:
+        - in: query
+          name: spot_PK
+          schema:
+            type: integer
+          description: 조회하려는 공연장 PK
+      responses:
+        '200':
+          description: 공연정보 조회
+          content:
+            application/json:
+              example:
+                response:
+                  spot_PK: 6
+                  user_PK: 1
+                  spot_name: flflfl
+                  spot_theme: 1
+                  donation_possible: 1
+                  adult_only: 1
+                  reg_date: '2021-12-28 21:26:37'
+                  update_date:
+                  delete_date:
+                  user_nickname: bittnuri jung
+                  profile_path: "/images/user/141020AATXAJweyvv6zD1jqYbscItIdcTrV8KVwlpybf29Xjm6=s96-c.jpeg"
+
+    patch:
+      summary: 공연장 정보 수정
+      description: BUSKID 필수 / 공연장 이름, 후원여부 수정 가능 (전체 데이터 필수. 수정하지 않으면 기존 데이터 전송해주면 됨)
+      tags:
+        - 공연장
+      requestBody:
+        required: true
+        content:
+          application/raw:
+            schema:
+              type: object
+              properties:
+                spot_PK:
+                  description: 수정하려는 공연장 고유번호
+                  type: integer
+                  example: 1
+                spot_name:
+                  description: 공연장 이름
+                  type: string
+                  example: 멋진 이름...
+                donation_possible:
+                  description: 후원 가능 여부. 0은 false,불가능 1은 true,가능
+                  type: integer
+                  example: 1
+      responses:
+        '200':
+          description: 공연장 정보 row. 똑같은 정보를 보내 바뀐게 없는 경우에는 Same data, nothing updated
+          content:
+            application/json:
+              example:
+                response:
+                  spot_PK: 3
+                  user_PK: 2
+                  spot_name: 새로운 공연장 이름
+                  spot_theme: 1
+                  donation_possible: 1
+                  adult_only: 1
+                  reg_date: '2021-12-28 21:20:26'
+                  update_date:
+                  delete_date:
+    delete:
+      summary: 공연 종료
+      description: BUSKID 필수 / 해당 공연에서 후원 받은 크리스탈 숫자 리턴
+      tags:
+        - 공연장
+      responses:
+        '200':
+          description: 공연장 종료처리 성공
+          content:
+            application/json:
+              example:
+                response:
+                  response_msg: Successfully finished spot
+                  crystal_num: 46
+
+      requestBody:
+        required: true
+        content:
+          application/raw:
+            schema:
+              type: object
+              properties:
+                spot_PK:
+                  description: 수정하려는 공연장 고유번호
+                  type: integer
+                  example: 1
+
+  /api/messages/v1/messages:
+    post:
+      summary: 문자 전송
+      description: BUSKID 필수 / 튜토리얼 종료시 호출함
+      tags:
+        - 문자
+      requestBody:
+        required: true
+        content:
+          application/raw:
+            schema:
+              type: object
+              properties:
+                partner_PK:
+                  description: 문자 받는 상대 PK
+                  type: integer
+                  example: 1
+                message:
+                  description: 문자 내용
+                  type: string
+                  example: 안녕하쇼
+
+      responses:
+        '200':
+          description: 유저정보 가져오기 성공
+
+  /api/users/v1/character:
+    patch:
+      summary: 유저 캐릭터 변경
+      description: BUSKID 필수 /
+      tags:
+        - 유저
+      requestBody:
+        required: true
+        content:
+          application/raw:
+            schema:
+              type: object
+              properties:
+                char_PK:
+                  description: 변경하려는 캐릭터 번호
+                  type: integer
+                  example: 4
+      responses:
+        '200':
+          description: 캐릭터 변경 성공. 유저 row 반환
+          content:
+            application/json:
+              example:
+                response:
+                  user_PK: 1
+                  user_nickname: bittnuri jung
+                  profile_path: "/images/user/141020AATXAJweyvv6zD1jqYbscItIdcTrV8KVwlpybf29Xjm6=s96-c.jpeg"
+                  user_email: bitt.buskon@gmail.com
+                  user_desc:
+                  favorite_music_PK: 1
+                  star_num: 1666
+                  char_PK: 3
+                  tutorial_finished: 1
+                  social_type: google
+  /api/users/v1/user:
+    post:
+      summary: 유저 정보 수정 (1차. 캐릭터, 닉네임,프사)
+      description: BUSKID 필수 / 유저 닉네임, 캐릭터 pk 필수. 프로필 경로나 이미지 둘 중 하나는 필수.
+        // 프로필 이미지는 수정사항 없으면 아예 안보내야 함!!!!!
+      tags:
+        - 유저
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                user_nickname:
+                  description: 유저 닉네임
+                  type: string
+                  example: 천재
+                char_PK:
+                  description: 캐릭터 고유번호 (클라에서 정함)
+                  type: integer
+                  example: 3
+                user_profile_file:
+                  description: 유저가 프로필 수정한 경우, 그 이미지 파일. 없으면 아예 보내지도 말아야 함!!!
+                  type: string
+                  format: binary
+                profile_path:
+                  description: 프로필 변경안한경우, 유저 기존 프로필사진 경로를 보내도록 해야 함. path / file 둘 중 하나는 필수
+                  type: string
+                  example: /path/to/user/image
+              required:
+                - user_nickname
+                - char_PK
+      responses:
+        '200':
+          description: 수정 성공. 유저 정보 반환
+          content:
+            application/json:
+              example:
+                response:
+                  user_PK: 1
+                  user_nickname: babo
+                  profile_path: "/images/user/1303540701 음악탭 상단 플레이리스트.png"
+                  user_email: bitt.buskon@gmail.com
+                  user_desc:
+                  favorite_music_PK: 2
+                  star_num: 1618
+                  char_PK: 3
+                  tutorial_finished: 1
+                  social_type: google
+
+
+  /api/users/v1/tutorial-finished:
+    patch:
+      summary: 튜토리얼 달성
+      description: BUSKID 필수 / 튜토리얼 종료시 호출함
+      tags:
+        - 유저
+      responses:
+        '200':
+          description: 유저정보 가져오기 성공
+
+  /api/users/v1/quests:
+    get:
+      summary: 전체 퀘스트 달성여부 체크 (입장)
+      description: BUSKID 필수 / 유저가 게임 서비스 입장시 전체 퀘스트 달성여부 true/false(1 달성, 0 비달성) 로 받음. 클라에서 이 값 저장해뒀다가
+        퀘스트 달성여부 체크해야하는 곳에서 사용하기로 함. daily퀘스트와 normal(단발성) 퀘스트가 있다.
+      tags:
+        - 유저
+      responses:
+        '200':
+          description: 퀘스트 번호, 이름, 타입 (normal:단발성, daily:매일) & 달성여부 반환. 0 비달성, 1 달성
+          content:
+            application/json:
+              example:
+                response:
+                  - quest_PK: 3
+                    quest_name: 매일 들어와줘
+                    quest_type: daily
+                    finished: 0
+                  - quest_PK: 1
+                    quest_name: 나만 없어 우리집
+                    quest_type: normal
+                    finished: 1
+                  - quest_PK: 2
+                    quest_name: 자본주의가 낳은 괴물
+                    quest_type: normal
+                    finished: 0
+
+
+  /api/users/v1/login:
+    post:
+      summary: 로그인
+      description: 유저 이메일 전송해서 회원가입한 유저인지 확인하여 로그인처리 => 레디스 세션 등록됨, 해당 세션 BUSKID 쿠키 전달
+      tags:
+        - 유저
+      requestBody:
+        required: true
+        content:
+          application/raw:
+            schema:
+              type: object
+              properties:
+                user_email:
+                  type: string
+                  example: bit@gmail.com
+      responses:
+        '200':
+          description: 로그인 성공
+          content:
+            application/json:
+              example:
+                response:
+                  user_PK: 1
+                  user_nickname: bittnuri jung
+                  profile_path: "/images/user/141020AATXAJweyvv6zD1jqYbscItIdcTrV8KVwlpybf29Xjm6=s96-c.jpeg"
+                  user_email: bitt.buskon@gmail.com
+                  user_desc:
+                  favorite_music_PK:
+                  star_num: 1666
+                  char_PK: 0
+                  tutorial_finished: 0
+                  social_id: abc
+                  social_type: google
+                  user_auth: 1
+                  terms_of_service: 1
+                  privacy_policy: 1
+                  over_14years_old: 1
+                  reg_date: '2021-12-22 22:39:16'
+                  update_date: '2022-01-24 17:24:32'
+                  delete_date:
+                  crystal_num: 102
+
+  /api/users/v1/auto-login:
+    get:
+      summary: 자동로그인
+      description: 로그인한 유저 BUSKID 쿠키 전달 (브라우저에 있다면 자동으로 전달됨)
+        -> 유저정보 받아옴, 테스트하는 컴퓨터에 로그인된 유저 BUSKID없다면 로그인 API 실행 후 하면 됨.
+      tags:
+        - 유저
+      responses:
+        '200':
+          description: 유저정보 가져오기 성공
+          content:
+            application/json:
+              example:
+                response:
+                  user_PK: 1
+                  user_nickname: bittnuri jung
+                  profile_path: "/images/user/141020AATXAJweyvv6zD1jqYbscItIdcTrV8KVwlpybf29Xjm6=s96-c.jpeg"
+                  user_email: bitt.buskon@gmail.com
+                  user_desc:
+                  favorite_music_PK:
+                  star_num: 1666
+                  char_PK: 0
+                  tutorial_finished: 0
+                  social_id: abc
+                  social_type: google
+                  user_auth: 1
+                  terms_of_service: 1
+                  privacy_policy: 1
+                  over_14years_old: 1
+                  reg_date: '2021-12-22 22:39:16'
+                  update_date: '2022-01-24 17:24:32'
+                  delete_date:
+                  crystal_num: 102
+
+  /api/users/v1/logout:
+    delete:
+      summary: 로그아웃
+      description: BUSKID -> 로그아웃처리 (레디스 세션 삭제 = 자동로그인 불가)
+      tags:
+        - 유저
+      responses:
+        '200':
+          description: 로그아웃 성공
+          content:
+            application/json:
+              example:
+                response: Successfully logged out
+
+  /api/users/v1/users:
+    post:
+      summary: 회원가입
+      description: 소셜 회원가입만 가능. 현재 구글만! 구글의 경우 id_token 필수.
+      tags:
+        - 유저
+      requestBody:
+        required: true
+        content:
+          application/raw:
+            schema:
+              type: object
+              properties:
+                social_type:
+                  type: string
+                  required: true
+                  example: google
+                id_toked:
+                  type: string
+      responses:
+        '200':
+          description: 로그인 성공
+          content:
+            application/json:
+              example:
+                response:
+                  user_PK: 1
+                  user_nickname: bittnuri jung
+                  profile_path: "/images/user/141020AATXAJweyvv6zD1jqYbscItIdcTrV8KVwlpybf29Xjm6=s96-c.jpeg"
+                  user_email: bitt.buskon@gmail.com
+                  user_desc:
+                  favorite_music_PK:
+                  star_num: 1666
+                  char_PK: 0
+                  tutorial_finished: 0
+                  social_id: abc
+                  social_type: google
+                  user_auth: 1
+                  terms_of_service: 1
+                  privacy_policy: 1
+                  over_14years_old: 1
+                  reg_date: '2021-12-22 22:39:16'
+                  update_date: '2022-01-24 17:24:32'
+                  delete_date:
+                  crystal_num: 102
+    delete:
+      summary: 회원탈퇴
+      description: BUSKID 정보 확인하여 탈퇴 처리함. delete_date 업데이트하는 방식
+      tags:
+        - 유저
+      responses:
+        '200':
+          description: 탈퇴 성공
+          content:
+            application/json:
+              example:
+                response: Successfully withdraw user
+
+    get:
+      summary: Get 테스트용. 실제로 사용되는 곳 없는 API
+      description: 서버에 아무 데이터 업이 Get방식으로 요청
+      tags:
+        - 유저
+      responses:
+        '200':
+          description: 조회 성공
+
+  /api/users/v1/myphone:
+    get:
+      summary: 마이폰 열기
+      description: BUSKID 값으로 유저 정보 확인, 마이폰 열면 빨간점 찍을거 있는지 확인
+        (reward_to_take - 보상 아직 안받은 완료 퀘스트 & unread_message - 아직 읽지않은 문자 여부)
+      tags:
+        - 유저
+      responses:
+        '200':
+          description: 안읽은 메시지 유뮤, 퀘스트 달성하고 스타 안받은거 유무 반환. 있으면 1 없으면 0
+          content:
+            application/json:
+              example:
+                response:
+                  reward_to_take: 1
+                  unread_message: 1
+
+
+
